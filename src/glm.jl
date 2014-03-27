@@ -1,4 +1,4 @@
-export GLModel, LogisticModel, LinearModel, GLMLearner, update!,
+export GLModel, LogisticModel, LinearModel, QuantileModel, GLMLearner, update!,
         grad!, grad_scratch!, predict!, loss, predict
 
 
@@ -18,6 +18,16 @@ function linpred!{T <: FP}(m::GLModel,
         end
         pr
 end
+
+#
+# this should be overridden if the subtype does not use identity link
+#
+predict!{T <: FP}(m::GLModel,
+                  pr::Vector{T},
+                  coefs::Vector{T},
+                  x::Matrix{T};
+                  offset::Vector{T} = emptyvec(T)) = linpred!(m, pr, coefs, x; offset=offset)
+
 
 #grad_scratch! calculates the gradient without allocating new memory for the residual
 # vector.
@@ -48,12 +58,6 @@ grad!{T<: FP}(m::GLModel,
 ##
 type LinearModel <: GLModel end
 
-predict!{T <: FP}(m::LinearModel,
-                  pr::Vector{T},
-                  coefs::Vector{T},
-                  x::Matrix{T};
-                  offset::Vector{T} = emptyvec(T)) = linpred!(m, pr, coefs, x; offset=offset)
-
 loss{T<: FP}(m::LinearModel, pr::Vector{T}, y::Vector{T}) = meansqdiff(pr, y)
 
 
@@ -74,6 +78,32 @@ end
 
 
 loss{T<: FP}(m::LogisticModel, pr::Vector{T}, y::Vector{T}) = mean(NBLL(), pr, y)
+
+##
+## Quantile regression
+##
+type QuantileModel <: GLModel
+    tau :: Float64
+end
+
+QuantileModel() = QuantileModel(0.5)
+
+function grad_scratch!{T<: FP}(m::QuantileModel,
+                               gr::Vector{T},
+                               coefs::Vector{T},
+                               x::Matrix{T},
+                               y::Vector{T},
+                               scratch::Vector{T};
+                               offset::Vector{T} = emptyvec(T))
+    predict!(m, scratch, coefs, x; offset=offset)
+    subtract!(scratch, y)
+    map1!(Qgrad(), scratch, m.tau)
+    alpha = 2.0/size(x, 1)
+    BLAS.gemv!('T', alpha, x, scratch, 0.0, gr)
+    gr
+end
+
+loss{T<:FP}(m::QuantileModel, pr::Vector{T}, y::Vector{T}) = meanabsdiff(pr, y)
 
 
 type GLMLearner{T<:FP}
