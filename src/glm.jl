@@ -1,5 +1,5 @@
 export GLModel, LogisticModel, LinearModel, GLMLearner, update!,
-        grad!, grad_scratch!, predict!, loss
+        grad!, grad_scratch!, predict!, loss, predict
 
 
 abstract GLModel
@@ -94,6 +94,9 @@ end
 
 GLMLearner{T<:FP}(m::GLModel, optimizer::AbstractSGD, ::Type{T}) = GLMLearner{T}(m, optimizer, T)
 
+GLMLearner(m::GLModel, optimizer::AbstractSGD) = GLMLearner(m, optimizer, Float64)
+
+
 function init!{T}(obj::GLMLearner{T}, x)
     obj.initialized && error("obj already initialized")
     obj.p = size(x, 2)
@@ -110,4 +113,8 @@ function update!{T <:FP}(obj::GLMLearner{T}, x::Matrix{T}, y::Vector{T})
     obj
 end
 
+predict!{T<:FP}(obj::GLMLearner{T}, pr::Vector{T}, x::Matrix{T}; offset=emptyvec(T)) =
+    predict!(obj.m, pr, obj.coefs, x, offset=offset)
 
+predict{T<:FP}(obj::GLMLearner, x::Matrix{T}; offset=emptyvec(T)) =
+    predict!(obj, Array(T, size(x,1)), x, offset=offset)
