@@ -3,7 +3,7 @@ export AbstractSGD, SimpleSGD
 
 abstract AbstractSGD
 #should implement a update! method:
-#update!{T<:FloatingPoint}(obj::AbstractSGD, weights::Matrix{T}, gr::Matrix{T})
+#update!{T<:FloatingPoint}(obj::AbstractSGD, weights::Vector{T}, gr::Vector{T})
 
 type SimpleSGD <: AbstractSGD
     alpha1::Float64
@@ -15,9 +15,9 @@ type SimpleSGD <: AbstractSGD
     end
 end
 
-function update!{T<:FloatingPoint}(obj::SimpleSGD, weights::Matrix{T}, gr::Matrix{T})
+function update!{T<:FloatingPoint}(obj::SimpleSGD, weights::Vector{T}, gr::Vector{T})
     obj.t += 1
     stepsize = - obj.alpha1 * obj.alpha2/(obj.t + obj.alpha2)
-    fma!(weights, convert(T, gr, stepsize))
+    fma!(weights, gr, convert(T, stepsize))
     weights
 end

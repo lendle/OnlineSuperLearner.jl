@@ -1,5 +1,21 @@
 module OnlineSuperLearner
 
-# package code goes here
+using NumericExtensions, NumericFuns
+
+import NumericExtensions.evaluate
+
+
+typealias FP FloatingPoint
+
+abstract AbstractLearner
+#should implement an update and a predict method
+# update!{T<:FloatingPoint}(obj::AbstractLearner, x::Matrix{T}, y::Vector{T})
+#and possibly additional kw args
+
+include("utils.jl")
+include("sgd.jl")
+include("glm.jl")
+
+
 
 end # module
