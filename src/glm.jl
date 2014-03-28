@@ -12,7 +12,7 @@ function linpred!{T <: FP}(m::GLModel,
                            coefs::Vector{T},
                            x::Matrix{T};
                            offset::Vector{T} = emptyvec(T))
-        BLAS.gemv!('N', 1.0, x, coefs, 0.0, pr)
+        BLAS.gemv!('N', one(T), x, coefs, zero(T), pr)
         if !isempty(offset)
             add!(pr, offset)
         end
@@ -42,7 +42,7 @@ function grad_scratch!{T<: FP}(m::GLModel,
     predict!(m, scratch, coefs, x; offset=offset)
     subtract!(scratch, y)
     alpha = 2.0/size(x, 1)
-    BLAS.gemv!('T', alpha, x, scratch, 0.0, gr)
+    BLAS.gemv!('T', convert(T, alpha), x, scratch, zero(T), gr)
     gr
 end
 
@@ -99,7 +99,7 @@ function grad_scratch!{T<: FP}(m::QuantileModel,
     subtract!(scratch, y)
     map1!(Qgrad(), scratch, m.tau)
     alpha = 2.0/size(x, 1)
-    BLAS.gemv!('T', alpha, x, scratch, 0.0, gr)
+    BLAS.gemv!('T', alpha, x, scratch, zero(T), gr)
     gr
 end
 
@@ -113,7 +113,7 @@ type GLMLearner{T<:FP}
     gr::Vector{T}
     optimizer::AbstractSGD
     initialized
-    function GLMLearner{T <:FP}(m::GLModel, optimizer::AbstractSGD, ::Type{T})
+    function GLMLearner(m::GLModel, optimizer::AbstractSGD)
         obj = new()
         obj.m = m
         obj.optimizer = optimizer
@@ -122,10 +122,18 @@ type GLMLearner{T<:FP}
     end
 end
 
-GLMLearner{T<:FP}(m::GLModel, optimizer::AbstractSGD, ::Type{T}) = GLMLearner{T}(m, optimizer, T)
+GLMLearner(m::GLModel, optimizer::AbstractSGD) = GLMLearner{Float64}(m, optimizer)
 
-GLMLearner(m::GLModel, optimizer::AbstractSGD) = GLMLearner(m, optimizer, Float64)
-
+function Base.show(io::IO, obj::GLMLearner)
+    print(io, "Model: ")
+    show(io, obj.m)
+    print(io, "\nOptimizer: ")
+    show(io, obj.optimizer)
+    if obj.initialized
+        print(io, "\nCoefficients: ")
+        show(io, obj.coefs)
+    end
+end
 
 function init!{T}(obj::GLMLearner{T}, x)
     obj.initialized && error("obj already initialized")
@@ -146,5 +154,5 @@ end
 predict!{T<:FP}(obj::GLMLearner{T}, pr::Vector{T}, x::Matrix{T}; offset=emptyvec(T)) =
     predict!(obj.m, pr, obj.coefs, x, offset=offset)
 
-predict{T<:FP}(obj::GLMLearner, x::Matrix{T}; offset=emptyvec(T)) =
+predict{T<:FP}(obj::GLMLearner{T}, x::Matrix{T}; offset=emptyvec(T)) =
     predict!(obj, Array(T, size(x,1)), x, offset=offset)

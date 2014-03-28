@@ -1,6 +1,6 @@
 module OnlineSuperLearner
 
-using NumericExtensions, NumericFuns
+using NumericExtensions, NumericFuns, Devectorize
 
 import NumericExtensions.evaluate
 
