@@ -20,3 +20,8 @@ predict(mylearner32, x32)
 
 myadagrad = GLMLearner(LogisticModel(), AdaGrad(1.0))
 update!(myadagrad, x, y)
+
+
+myglmnet = GLMNetLearner(LogisticModel(), AdaGrad(1.0), 0.1, 0.1)
+
+update!(myglmnet, x, y)

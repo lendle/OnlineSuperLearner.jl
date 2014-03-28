@@ -74,6 +74,8 @@ end
 
 AdaGrad(eta::Float64) = AdaGrad{Float64}(eta)
 
+Base.show{T}(io::IO, obj::AdaGrad{T}) = print(io, "AdaGrad{$T}(eta=$(obj.eta))")
+
 function init!(obj::AdaGrad, weights)
     obj.initialized && error("already initialized")
     obj.sqgr = zeros(weights)
