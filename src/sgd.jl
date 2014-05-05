@@ -17,7 +17,8 @@ end
 
 function update!{T<:FP}(obj::SimpleSGD, weights::Vector{T}, gr::Vector{T})
     obj.t += 1
-    stepsize = - obj.alpha1 * obj.alpha2/(obj.t + obj.alpha2)
+
+    stepsize = - obj.alpha1 / (1.0 + obj.alpha1 * obj.alpha2 * obj.t)
     fma!(weights, gr, convert(T, stepsize))
     weights
 end
@@ -30,7 +31,7 @@ type AdaDelta{T<:FP} <: AbstractSGD
     up::Vector{T}
     initialized::Bool
     function AdaDelta(rho::Float64, eps::Float64)
-        rho <= 0.0 || eps <= 0.0 && error("rho and epsilon should be positive")
+        (rho <= 0.0 || eps <= 0.0) && error("rho and epsilon should be positive")
         obj = new()
         obj.rho = rho
         obj.eps = eps
@@ -78,7 +79,7 @@ Base.show{T}(io::IO, obj::AdaGrad{T}) = print(io, "AdaGrad{$T}(eta=$(obj.eta))")
 
 function init!(obj::AdaGrad, weights)
     obj.initialized && error("already initialized")
-    obj.sqgr = zeros(weights)
+    obj.sqgr = fill!(similar(weights), 1.0e-8)
     obj.initialized = true
 end
 

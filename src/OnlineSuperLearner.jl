@@ -4,7 +4,6 @@ using NumericExtensions, NumericFuns, Devectorize
 
 import NumericExtensions.evaluate
 
-
 typealias FP FloatingPoint
 
 abstract AbstractLearner
@@ -15,7 +14,7 @@ abstract AbstractLearner
 include("utils.jl")
 include("sgd.jl")
 include("glm.jl")
-
+include("svm.jl")
 
 
 end # module

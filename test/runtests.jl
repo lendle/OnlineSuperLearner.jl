@@ -25,3 +25,7 @@ update!(myadagrad, x, y)
 myglmnet = GLMNetLearner(LogisticModel(), AdaGrad(1.0), 0.1, 0.1)
 
 update!(myglmnet, x, y)
+
+mysvm = SVM(AdaGrad(1.0), 0.1)
+
+update!(mysvm, x, y)
