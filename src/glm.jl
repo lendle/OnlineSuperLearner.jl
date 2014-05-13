@@ -2,17 +2,21 @@ export GLMModel, LogisticModel, LinearModel, QuantileModel, GLMLearner, update!,
         grad!, grad_scratch!, predict!, loss, predict, GLMNetLearner
 
 
-
+##############
+## GLMModel ##
+##############################
+## Used to specify GLM kind ##
+##############################
 abstract GLMModel
-#Subtypes of GLMModel should define the loss, predict!, and grad_scratch! functions
-# if hte defaults are not appropriate.
+#Subtypes should define the loss, predict!, and grad_scratch! functions
+# if the defaults are not appropriate.
 
 
-function linpred!{T <: FP}(m::GLMModel,
-                           pr::Vector{T},
-                           coefs::Vector{T},
-                           x::Matrix{T};
-                           offset::Vector{T} = emptyvector(T))
+function linpred!(m::GLMModel,
+                           pr::DenseVector{Float64},
+                           coefs::Vector{Float64},
+                           x::Matrix{Float64};
+                           offset::Vector{Float64} = emptyvector(Float64))
         A_mul_B!(pr, x, coefs)
         if !isempty(offset)
             add!(pr, offset)
@@ -21,110 +25,113 @@ function linpred!{T <: FP}(m::GLMModel,
 end
 
 #
-# this should be overridden if the GLMModel implementation does not use identity link
+# default predict! for GLMModel uses identity link
 #
-predict!{T <: FP}(m::GLMModel,
-                  pr::Vector{T},
-                  coefs::Vector{T},
-                  x::Matrix{T};
-                  offset::Vector{T} = emptyvector(T)) = linpred!(m, pr, coefs, x; offset=offset)
+predict!(m::GLMModel,
+        pr::DenseVector{Float64},
+        coefs::Vector{Float64},
+        x::Matrix{Float64};
+        offset::Vector{Float64} = emptyvector(Float64)) = linpred!(m, pr, coefs, x; offset=offset)
 
 
-#grad_scratch! calculates the gradient without allocating new memory for the residual
-# vector.
-#resid is scratch space and  should have dims equal to size(y)
-function grad_scratch!{T<: FP}(m::GLMModel,
-                               gr::Vector{T},
-                               coefs::Vector{T},
-                               x::Matrix{T},
-                               y::Vector{T},
-                               resid::Vector{T};
-                               offset::Vector{T} = emptyvector(T))
+# grad_scratch! calculates the gradient without allocating new memory
+# for the residual vector.
+# resid is scratch space and should have dims equal to size(y)
+# Default is appropriate for GLMs with canonical link
+function grad_scratch!(m::GLMModel,
+                      gr::Vector{Float64},
+                      coefs::Vector{Float64},
+                      x::Matrix{Float64},
+                      y::Vector{Float64},
+                      resid::Vector{Float64};
+                      offset::Vector{Float64} = emptyvector(Float64))
     predict!(m, resid, coefs, x; offset=offset)
     subtract!(resid, y) # resid = prediction - y
     alpha = 2.0/size(x, 1)
-    BLAS.gemv!('T', convert(T, alpha), x, resid, zero(T), gr) #grad \propto x'resid = -x'(y - pred)
+    BLAS.gemv!('T', alpha, x, resid, 0.0, gr) #grad \propto x'resid = -x'(y - pred)
     gr
 end
 
-grad!{T<: FP}(m::GLMModel,
-    gr::Vector{T},
-    coefs::Vector{T},
-    x::Matrix{T},
-    y::Vector{T};
-    offset::Vector{T} = emptyvector(T)) = grad_scratch!(m, gr, coefs, x, y, similar(y), offset=offset)
+grad!(m::GLMModel,
+    gr::Vector{Float64},
+    coefs::Vector{Float64},
+    x::Matrix{Float64},
+    y::Vector{Float64};
+    offset::Vector{Float64} = emptyvector(Float64)) = grad_scratch!(m, gr, coefs, x, y, similar(y), offset=offset)
 
-##
-##OLS
-##
+#########
+## OLS ##
+#########
 type LinearModel <: GLMModel end
 
-loss{T<: FP}(m::LinearModel, pr::Vector{T}, y::Vector{T}) = meansqdiff(pr, y)
+loss(m::LinearModel, pr::DenseVector{Float64}, y::Vector{Float64}) = meansqdiff(pr, y)
 
 
-##
-##Logistic regression
-##
+#########################
+## Logistic regression ##
+#########################
 type LogisticModel <: GLMModel end
 
-function predict!{T <: FP}(m::LogisticModel,
-                           pr::Vector{T},
-                           coefs::Vector{T},
-                           x::Matrix{T};
-                           offset::Vector{T} = emptyvector(T))
+function predict!(m::LogisticModel,
+                           pr::DenseVector{Float64},
+                           coefs::Vector{Float64},
+                           x::Matrix{Float64};
+                           offset::Vector{Float64} = emptyvector(Float64))
     linpred!(m, pr, coefs, x; offset=offset)
     map1!(LogisticFun(), pr)
     pr
 end
 
 
-loss{T<: FP}(m::LogisticModel, pr::Vector{T}, y::Vector{T}) = mean(NBLL(), pr, y)
+loss(m::LogisticModel, pr::DenseVector{Float64}, y::Vector{Float64}) = mean(NBLL(), pr, y)
 
-##
-## Quantile regression
-##
+#########################
+## Quantile regression ##
+#########################
 type QuantileModel <: GLMModel
     tau :: Float64
 end
 
 QuantileModel() = QuantileModel(0.5)
 
-function grad_scratch!{T<: FP}(m::QuantileModel,
-                               gr::Vector{T},
-                               coefs::Vector{T},
-                               x::Matrix{T},
-                               y::Vector{T},
-                               scratch::Vector{T};
-                               offset::Vector{T} = emptyvector(T))
+function grad_scratch!(m::QuantileModel,
+                               gr::Vector{Float64},
+                               coefs::Vector{Float64},
+                               x::Matrix{Float64},
+                               y::Vector{Float64},
+                               scratch::Vector{Float64};
+                               offset::Vector{Float64} = emptyvector(Float64))
     predict!(m, scratch, coefs, x; offset=offset)
     subtract!(scratch, y)
     map1!(Qgrad(), scratch, m.tau)
     alpha = 2.0/size(x, 1)
-    BLAS.gemv!('T', alpha, x, scratch, zero(T), gr)
+    BLAS.gemv!('T', alpha, x, scratch, 0.0, gr)
     gr
 end
 
-loss{T<:FP}(m::QuantileModel, pr::Vector{T}, y::Vector{T}) = meanabsdiff(pr, y)
+loss(m::QuantileModel, pr::DenseVector{Float64}, y::Vector{Float64}) = meanabsdiff(pr, y)
 
 
-abstract AbstractGLMLearner <: AbstractLearner
+##################
+## End GLMModel ##
+##################
 
-function Base.show(io::IO, obj::AbstractGLMLearner)
-    print(io, "Model: ")
-    show(io, obj.m)
-    print(io, "\nOptimizer: ")
-    show(io, obj.optimizer)
-    if obj.initialized
-        print(io, "\nCoefficients: ")
-        show(io, obj.coefs)
-    end
-end
+abstract AbstractGLMLearner <: Learner
 
-type GLMLearner{T<:FP} <: AbstractGLMLearner
+
+predict!(obj::AbstractGLMLearner, pr::DenseVector{Float64}, x::Matrix{Float64}; offset=emptyvector(Float64)) =
+    predict!(obj.m, pr, obj.coefs, x, offset=offset)
+
+
+
+################################
+## GLM without regularization ##
+################################
+type GLMLearner <: AbstractGLMLearner
     m::GLMModel
     p::Int
-    coefs::Vector{T}
-    gr::Vector{T}
+    coefs::Vector{Float64}
+    gr::Vector{Float64}
     optimizer::AbstractSGD
     initialized::Bool
     function GLMLearner(m::GLMModel, optimizer::AbstractSGD)
@@ -136,41 +143,49 @@ type GLMLearner{T<:FP} <: AbstractGLMLearner
     end
 end
 
-GLMLearner(m::GLMModel, optimizer::AbstractSGD) = GLMLearner{Float64}(m, optimizer)
+
+function Base.show(io::IO, obj::GLMLearner)
+    print(io, "Model: ")
+    show(io, obj.m)
+    print(io, "\nOptimizer: ")
+    show(io, obj.optimizer)
+    if obj.initialized
+        print(io, "\nCoefficients: ")
+        show(io, obj.coefs)
+    end
+end
 
 #Allocate obj.coefs and obj.gr on first call to update!
-function init!{T}(obj::GLMLearner{T}, p)
+function init!(obj::GLMLearner, p)
     obj.initialized && error("already initialized")
     obj.p = p
-    obj.coefs = zeros(T, p)
-    obj.gr = Array(T, p)
+    obj.coefs = zeros(p)
+    obj.gr = Array(Float64, p)
     obj.initialized = true
     obj
 end
 
-function update!{T <:FP}(obj::GLMLearner{T}, x::Matrix{T}, y::Vector{T})
+function update!(obj::GLMLearner, x::Matrix{Float64}, y::Vector{Float64})
     obj.initialized || init!(obj, size(x, 2))
     grad!(obj.m, obj.gr, obj.coefs, x, y)
     update!(obj.optimizer, obj.coefs, obj.gr)
     obj
 end
 
-predict!{T<:FP}(obj::AbstractGLMLearner, pr::Vector{T}, x::Matrix{T}; offset=emptyvector(T)) =
-    predict!(obj.m, pr, obj.coefs, x, offset=offset)
+#############################
+## GLM with regularization ##
+#############################
 
-predict{T<:FP}(obj::AbstractGLMLearner, x::Matrix{T}; offset=emptyvector(T)) =
-    predict!(obj, Array(T, size(x,1)), x, offset=offset)
-
-type GLMNetLearner{T<:FP} <: AbstractGLMLearner
+type GLMNetLearner <: AbstractGLMLearner
     m::GLMModel
     lambda1::Float64
     lambda2::Float64
     p::Int
-    coefs::Vector{T}
-    gr::Vector{T}
-    gr2::Vector{T}
-    mu::Vector{T}
-    nu::Vector{T}
+    coefs::Vector{Float64}
+    gr::Vector{Float64}
+    gr2::Vector{Float64}
+    mu::Vector{Float64}
+    nu::Vector{Float64}
     optimizer::AbstractSGD
     optimizer2::AbstractSGD
     initialized::Bool
@@ -186,26 +201,24 @@ type GLMNetLearner{T<:FP} <: AbstractGLMLearner
     end
 end
 
+GLMNetLearner(m::GLMModel, optimizer::AbstractSGD, lambda1 = 0.0, lambda2 = 0.0) = GLMNetLearner(m, optimizer, lambda1, lambda2)
 
-GLMNetLearner(m::GLMModel, optimizer::AbstractSGD, lambda1 = 0.0, lambda2 = 0.0) = GLMNetLearner{Float64}(m, optimizer, lambda1, lambda2)
-
-
-function init!{T}(obj::GLMNetLearner{T}, p)
+function init!(obj::GLMNetLearner, p)
     obj.initialized && error("already initialized")
     obj.p = p
-    obj.coefs = zeros(T, p)
-    obj.gr = Array(T, p)
+    obj.coefs = zeros(p)
+    obj.gr = Array(Float64, p)
     if obj.lambda1 > 0.0
-        obj.mu = zeros(T, p)
-        obj.nu = zeros(T, p)
-        obj.gr2 = Array(T, p)
+        obj.mu = zeros(p)
+        obj.nu = zeros(p)
+        obj.gr2 = Array(Float64, p)
         obj.optimizer2 = deepcopy(obj.optimizer)
     end
     obj.initialized = true
     obj
 end
 
-function update!{T <:FP}(obj::GLMNetLearner{T}, x::Matrix{T}, y::Vector{T})
+function update!(obj::GLMNetLearner, x::Matrix{Float64}, y::Vector{Float64})
     obj.initialized || init!(obj, size(x,2))
 
     #calculate the gradient like usual

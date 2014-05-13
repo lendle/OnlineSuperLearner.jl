@@ -1,20 +1,23 @@
 module OnlineSuperLearner
 
-using NumericExtensions, NumericFuns, Devectorize
+using NumericExtensions, NumericFuns, Devectorize, ArrayViews
 
 import NumericExtensions.evaluate
 
-typealias FP FloatingPoint
-
-abstract AbstractLearner
-#should implement an update and a predict method
-# update!{T<:FloatingPoint}(obj::AbstractLearner, x::Matrix{T}, y::Vector{T})
+abstract Learner
+#should implement an update! and a predict! method
+# update!{T<:FloatingPoint}(obj::Learner{T}, x::Matrix{T}, y::Vector{T})
 #and possibly additional kw args
+
+predict(obj::Learner, x::Matrix; kwargs...) =
+    predict!(obj, Array(Float64, size(x,1)), x; kwargs...)
+
 
 include("utils.jl")
 include("sgd.jl")
 include("glm.jl")
 include("svm.jl")
+include("sl.jl")
 
 
 end # module

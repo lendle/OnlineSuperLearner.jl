@@ -10,13 +10,6 @@ update!(mylearner, x, y)
 
 predict(mylearner, x)
 
-#Check that things work with Float32s
-mylearner32 =  GLMLearner{Float32}(LogisticModel(), AdaDelta{Float32}(1.0, 1.0))
-
-x32 = rand(Float32, 10,10)
-y32 = round(rand(Float32, 10))
-update!(mylearner32, x32, y32)
-predict(mylearner32, x32)
 
 myadagrad = GLMLearner(LogisticModel(), AdaGrad(1.0))
 update!(myadagrad, x, y)
@@ -26,6 +19,19 @@ myglmnet = GLMNetLearner(LogisticModel(), AdaGrad(1.0), 0.1, 0.1)
 
 update!(myglmnet, x, y)
 
-mysvm = SVM(AdaGrad(1.0), 0.1)
+#mysvm = SVM(AdaGrad(1.0), 0.1)
 
-update!(mysvm, x, y)
+#update!(mysvm, x, y)
+
+cands  = [GLMLearner(LogisticModel(), SimpleSGD(1.0, 1.0)),
+          GLMLearner(LogisticModel(), SimpleSGD(1.0, 0.1))]
+
+combiner = GLMLearner(LogisticModel(), SimpleSGD(1.0, 1.0))
+
+osl = SuperLearner(cands, combiner)
+
+update!(osl, x, y)
+
+update!(osl, x, y)
+
+predict(osl, x)
