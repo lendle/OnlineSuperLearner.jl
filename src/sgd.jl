@@ -10,7 +10,8 @@ type SimpleSGD <: AbstractSGD
     alpha2::Float64
     t::Int
     function SimpleSGD(alpha1::Float64, alpha2::Float64)
-        alpha1 <= 0.0 || alpha2 <= 0.0 && error("alpha1 and alpha2 should be positive")
+        alpha1 <= 0.0 && error("alpha1 should be positive")
+        alpha2 < 0.0 && error("alpha2 should be non-negative")
         new(alpha1, alpha2, 0)
     end
 end
