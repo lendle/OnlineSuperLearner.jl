@@ -1,9 +1,14 @@
 
-export AbstractSGD, SimpleSGD, AdaDelta, AdaGrad
+export AbstractSGD, SimpleSGD, AdaDelta, AdaGrad, AveragedSGD
 
 abstract AbstractSGD
 #should implement a update! method:
 #update!(obj::AbstractSGD, weights::Vector{Float64}, gr::Vector{Float64})
+
+#This function returns the vector of weights at which to evaluate the gradient
+#It should be overridden by SGD implementations that need the gradient evaluated at
+#values other than those stored in the Learner
+which_weights(obj::AbstractSGD, weights) = weights
 
 type SimpleSGD <: AbstractSGD
     alpha1::Float64
@@ -85,5 +90,43 @@ function update!(obj::AdaGrad, weights::Vector{Float64}, gr::Vector{Float64})
     obj.initialized || init!(obj, weights)
     @devec obj.sqgr[:] += gr .* gr
     @devec weights[:] -= obj.eta ./ sqrt(obj.sqgr) .* gr
+    weights
+end
+
+type AveragedSGD <: AbstractSGD
+    alpha1::Float64
+    alpha2::Float64
+    unaveraged_weights::Vector
+    t0::Int
+    t::Int
+    initialized::Bool
+    function AveragedSGD(alpha1::Float64, alpha2::Float64, t0::Int)
+        alpha1 <= 0.0 && error("alpha1 should be positive")
+        alpha2 < 0.0 && error("alpha2 should be non-negative")
+        obj = new()
+        obj.alpha1 = alpha1
+        obj.alpha2 = alpha2
+        obj.t0 = t0
+        obj.t = 0
+        obj.initialized = false
+        obj
+    end
+end
+
+function init!(obj::AveragedSGD, weights)
+    obj.initialized && error("already initialized")
+    obj.unaveraged_weights = zeros(weights)
+    obj.initialized = true
+end
+
+which_weights(obj::AveragedSGD, weights) = obj.initialized? obj.unaveraged_weights: weights
+
+function update!(obj::AveragedSGD, weights::Vector{Float64}, gr::Vector{Float64})
+    obj.initialized || init!(obj, weights)
+    obj.t += 1
+    stepsize = - obj.alpha1 * (1.0 + obj.alpha1 * obj.alpha2 * obj.t)^-0.75
+    fma!(obj.unaveraged_weights, gr, stepsize)
+    mu = 1.0 / max(1.0, obj.t - obj.t0)
+    @devec weights[:] += mu .* (obj.unaveraged_weights .- weights)
     weights
 end

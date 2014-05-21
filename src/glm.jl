@@ -1,5 +1,5 @@
 export GLMModel, LogisticModel, LinearModel, QuantileModel, GLMLearner, update!,
-        grad!, grad_scratch!, predict!, loss, predict, GLMNetLearner
+        grad!, grad_scratch!, predict!, loss, predict, GLMNetLearner, linpred
 
 
 ##############
@@ -12,11 +12,10 @@ abstract GLMModel
 # if the defaults are not appropriate.
 
 
-function linpred!(m::GLMModel,
-                           pr::DenseVector{Float64},
-                           coefs::Vector{Float64},
-                           x::Matrix{Float64};
-                           offset::Vector{Float64} = emptyvector(Float64))
+function linpred!(pr::DenseVector{Float64},
+                  coefs::Vector{Float64},
+                  x::Matrix{Float64};
+                  offset::Vector{Float64} = emptyvector(Float64))
         A_mul_B!(pr, x, coefs)
         if !isempty(offset)
             add!(pr, offset)
@@ -31,7 +30,7 @@ predict!(m::GLMModel,
         pr::DenseVector{Float64},
         coefs::Vector{Float64},
         x::Matrix{Float64};
-        offset::Vector{Float64} = emptyvector(Float64)) = linpred!(m, pr, coefs, x; offset=offset)
+        offset::Vector{Float64} = emptyvector(Float64)) = linpred!(pr, coefs, x; offset=offset)
 
 
 # grad_scratch! calculates the gradient without allocating new memory
@@ -77,7 +76,7 @@ function predict!(m::LogisticModel,
                            coefs::Vector{Float64},
                            x::Matrix{Float64};
                            offset::Vector{Float64} = emptyvector(Float64))
-    linpred!(m, pr, coefs, x; offset=offset)
+    linpred!(pr, coefs, x; offset=offset)
     map1!(LogisticFun(), pr)
     pr
 end
@@ -122,6 +121,15 @@ abstract AbstractGLMLearner <: Learner
 predict!(obj::AbstractGLMLearner, pr::DenseVector{Float64}, x::Matrix{Float64}; offset=emptyvector(Float64)) =
     predict!(obj.m, pr, obj.coefs, x, offset=offset)
 
+predict(obj::AbstractGLMLearner, x::Matrix{Float64}; offset=emptyvector(Float64)) =
+    predict!(obj, Array(Float64, size(x, 1)), x, offset=offset)
+
+linpred!(obj::AbstractGLMLearner, pr::DenseVector{Float64}, x::Matrix{Float64}; offset=emptyvector(Float64)) =
+    linpred!(pr, obj.coefs, x, offset=offset)
+
+linpred(obj::AbstractGLMLearner, x::Matrix{Float64}; offset=emptyvector(Float64)) =
+    linpred!(obj, Array(Float64, size(x, 1)), x, offset=offset)
+
 
 
 ################################
@@ -165,9 +173,9 @@ function init!(obj::GLMLearner, p)
     obj
 end
 
-function update!(obj::GLMLearner, x::Matrix{Float64}, y::Vector{Float64})
+function update!(obj::GLMLearner, x::Matrix{Float64}, y::Vector{Float64}; offset=emptyvector(Float64))
     obj.initialized || init!(obj, size(x, 2))
-    grad!(obj.m, obj.gr, obj.coefs, x, y)
+    grad!(obj.m, obj.gr, which_weights(obj.optimizer, obj.coefs), x, y, offset=offset)
     update!(obj.optimizer, obj.coefs, obj.gr)
     obj
 end
@@ -222,7 +230,7 @@ function update!(obj::GLMNetLearner, x::Matrix{Float64}, y::Vector{Float64})
     obj.initialized || init!(obj, size(x,2))
 
     #calculate the gradient like usual
-    grad!(obj.m, obj.gr, obj.coefs, x, y)
+    grad!(obj.m, obj.gr,  which_weights(obj.optimizer, obj.coefs), x, y)
     if obj.lambda2 > 0.0
         #for l2 regularization, add l2 penalty
         fma!(obj.gr, obj.coefs, obj.lambda2) #gr = gr + lambda2 * coef

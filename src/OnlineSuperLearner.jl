@@ -4,6 +4,8 @@ using NumericExtensions, NumericFuns, Devectorize, ArrayViews
 
 import NumericExtensions.evaluate
 
+import Common: predict, predict!, linpred, update!
+
 abstract Learner
 #should implement an update! and a predict! method
 # update!{T<:FloatingPoint}(obj::Learner{T}, x::Matrix{T}, y::Vector{T})
