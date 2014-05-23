@@ -4,7 +4,9 @@ using NumericExtensions, NumericFuns, Devectorize, ArrayViews
 
 import NumericExtensions.evaluate
 
-import Common: predict, predict!, linpred, update!
+import Common: predict, predict!, linpred, update!, loss
+
+export Learner 
 
 abstract Learner
 #should implement an update! and a predict! method
@@ -12,14 +14,14 @@ abstract Learner
 #and possibly additional kw args
 
 predict(obj::Learner, x::Matrix; kwargs...) =
-    predict!(obj, Array(Float64, size(x,1)), x; kwargs...)
+predict!(obj, Array(Float64, size(x,1)), x; kwargs...)
 
 
-include("utils.jl")
+include("extra.jl")
 include("sgd.jl")
 include("glm.jl")
 include("svm.jl")
 include("sl.jl")
-
+include("utils.jl")
 
 end # module
