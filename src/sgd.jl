@@ -1,4 +1,3 @@
-
 export AbstractSGD, SimpleSGD, AdaDelta, AdaGrad, AveragedSGD
 
 abstract AbstractSGD
@@ -46,7 +45,7 @@ type AdaDelta <: AbstractSGD
     end
 end
 
-Base.show(io::IO, obj::AdaDelta) = print(io, "AdaDelta(rho=$(obj.rho), eps=$(obj.eps))")
+Base.show(io::IO, obj::AdaDelta) = print(io, "AdaDelta(ρ=$(obj.rho), ε=$(obj.eps))")
 
 function init!(obj::AdaDelta, weights)
     obj.initialized && error("already initialized")
@@ -78,7 +77,7 @@ type AdaGrad <: AbstractSGD
 end
 
 
-Base.show(io::IO, obj::AdaGrad) = print(io, "AdaGrad(eta=$(obj.eta))")
+Base.show(io::IO, obj::AdaGrad) = print(io, "AdaGrad(η=$(obj.eta))")
 
 function init!(obj::AdaGrad, weights)
     obj.initialized && error("already initialized")
@@ -110,8 +109,10 @@ type AveragedSGD <: AbstractSGD
         obj.t = 0
         obj.initialized = false
         obj
-    end
+    end 
 end
+
+Base.show(io::IO, obj::AveragedSGD) = print(io, "AveragedSGD(α1=$(obj.alpha1), α2=$(obj.alpha2), t0=$(obj.t0))")
 
 function init!(obj::AveragedSGD, weights)
     obj.initialized && error("already initialized")
