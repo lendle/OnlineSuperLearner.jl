@@ -1,37 +1,31 @@
+module TestOnlineSuperLearner
+
 using OnlineSuperLearner, Base.Test
 
-#Check AdaDelta works
-mylearner=  GLMLearner(LogisticModel(), AdaDelta(1.0, 1.0))
 
-x = rand(10, 10)
-y = round(rand(10))
-
-update!(mylearner, x, y)
-
-predict(mylearner, x)
+my_tests = ["test_glm.jl",
+        "test_sl.jl"]
 
 
-myadagrad = GLMLearner(LogisticModel(), AdaGrad(1.0))
-update!(myadagrad, x, y)
+println("Running tests:")
 
 
-myglmnet = GLMNetLearner(LogisticModel(), AdaGrad(1.0), 0.1, 0.1)
+anyerrors = false
 
-update!(myglmnet, x, y)
+for my_test in my_tests
+    try
+        include(my_test)
+        println("\t\033[1m\033[32mPASSED\033[0m: $(my_test)")
+    catch
+        anyerrors = true
+        println("\t\033[1m\033[31mFAILED\033[0m: $(my_test)")
+    end
+end
 
-#mysvm = SVM(AdaGrad(1.0), 0.1)
+if anyerrors
+    throw("Tests failed")
+end
 
-#update!(mysvm, x, y)
 
-cands  = [GLMLearner(LogisticModel(), SimpleSGD(1.0, 1.0)),
-          GLMLearner(LogisticModel(), SimpleSGD(1.0, 0.1))]
 
-combiner = GLMLearner(LogisticModel(), SimpleSGD(1.0, 1.0))
-
-osl = SuperLearner(cands, combiner)
-
-update!(osl, x, y)
-
-update!(osl, x, y)
-
-predict(osl, x)
+end
