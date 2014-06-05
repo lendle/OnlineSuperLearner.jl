@@ -43,12 +43,8 @@ end
 function Base.show(io::IO, obj::GLMLearner)
     print(io, "Model: ")
     show(io, obj.m)
-    print(io, "\nOptimizer: ")
+    print(io, " Optimizer: ")
     show(io, obj.optimizer)
-    if obj.initialized
-        print(io, "\nCoefficients: ")
-        show(io, obj.coefs)
-    end
 end
 
 #Allocate obj.coefs and obj.gr on first call to update!
