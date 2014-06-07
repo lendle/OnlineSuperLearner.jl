@@ -1,6 +1,6 @@
 
 export GLMModel, LogisticModel, LinearModel, QuantileModel
-export linpred!, predict!, grad!, grad_scratch!, loss
+export grad_scratch!
 
 ##############################
 ## Used to specify GLM kind ##
