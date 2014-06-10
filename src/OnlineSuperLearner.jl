@@ -4,8 +4,6 @@ using NumericExtensions, NumericFuns, Devectorize, ArrayViews
 
 import NumericExtensions.evaluate
 
-import Common: predict, predict!, linpred, update!, loss
-
 export Learner 
 
 abstract Learner
