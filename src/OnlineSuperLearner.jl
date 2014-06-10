@@ -12,7 +12,7 @@ abstract Learner
 #and possibly additional kw args
 
 predict(obj::Learner, x::Matrix; kwargs...) =
-predict!(obj, Array(Float64, size(x,1)), x; kwargs...)
+	predict!(obj, Array(Float64, size(x,1)), x; kwargs...)
 
 
 include("extra.jl")

@@ -6,7 +6,7 @@ abstract AbstractSGD
 
 #This function returns the vector of weights at which to evaluate the gradient
 #It should be overridden by SGD implementations that need the gradient evaluated at
-#values other than those stored in the Learner
+#values other than those stored in the Learner (AveragedSGD)
 which_weights(obj::AbstractSGD, weights) = weights
 
 type SimpleSGD <: AbstractSGD
@@ -109,7 +109,7 @@ type AveragedSGD <: AbstractSGD
         obj.t = 0
         obj.initialized = false
         obj
-    end 
+    end
 end
 
 Base.show(io::IO, obj::AveragedSGD) = print(io, "AveragedSGD(α1=$(obj.alpha1), α2=$(obj.alpha2), t0=$(obj.t0))")
