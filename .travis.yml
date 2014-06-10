@@ -5,7 +5,6 @@ notifications:
   email: false
 env:
   matrix: 
-    - JULIAVERSION="juliareleases" 
     - JULIAVERSION="julianightlies" 
 before_install:
   - sudo add-apt-repository ppa:staticfloat/julia-deps -y
@@ -16,4 +15,3 @@ script:
   - julia -e 'Pkg.init(); run(`ln -s $(pwd()) $(Pkg.dir("OnlineSuperLearner"))`); Pkg.pin("OnlineSuperLearner"); Pkg.resolve()'
   - julia -e 'using OnlineSuperLearner; @assert isdefined(:OnlineSuperLearner); @assert typeof(OnlineSuperLearner) === Module'
   - julia ./test/runtests.jl
-  
