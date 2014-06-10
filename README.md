@@ -1,6 +1,7 @@
 # OnlineSuperLearner
 
 [![Build Status](https://travis-ci.org/lendle/OnlineSuperLearner.jl.png)](https://travis-ci.org/lendle/OnlineSuperLearner.jl)
+[![Coverage Status](https://coveralls.io/repos/lendle/OnlineSuperLearner.jl/badge.png)](https://coveralls.io/r/lendle/OnlineSuperLearner.jl)
 
 A young implementation of an online mini-batch version of the super learner algorithm in julia.
 
