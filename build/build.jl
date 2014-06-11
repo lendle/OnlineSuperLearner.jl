@@ -1,0 +1,1 @@
+Pkg.clone("git@github.com:lendle/OnlineLearning.jl.git")
