@@ -13,7 +13,7 @@ abstract GLMModel
 
 function linpred!(pr::DenseVector{Float64},
                   coefs::Vector{Float64},
-                  x::Matrix{Float64};
+                  x::DSMat{Float64};
                   offset::Vector{Float64} = emptyvector(Float64))
         A_mul_B!(pr, x, coefs)
         if !isempty(offset)
@@ -28,7 +28,7 @@ end
 predict!(m::GLMModel,
         pr::DenseVector{Float64},
         coefs::Vector{Float64},
-        x::Matrix{Float64};
+        x::DSMat{Float64};
         offset::Vector{Float64} = emptyvector(Float64)) = linpred!(pr, coefs, x; offset=offset)
 
 
@@ -39,21 +39,22 @@ predict!(m::GLMModel,
 function grad_scratch!(m::GLMModel,
                       gr::Vector{Float64},
                       coefs::Vector{Float64},
-                      x::Matrix{Float64},
+                      x::DSMat{Float64},
                       y::Vector{Float64},
                       resid::Vector{Float64};
                       offset::Vector{Float64} = emptyvector(Float64))
     predict!(m, resid, coefs, x; offset=offset)
     subtract!(resid, y) # resid = prediction - y
     alpha = 2.0/size(x, 1)
-    BLAS.gemv!('T', alpha, x, resid, 0.0, gr) #grad \propto x'resid = -x'(y - pred)
+    At_mul_B!(alpha, x, resid, 0.0, gr)
+    #BLAS.gemv!('T', alpha, x, resid, 0.0, gr) #grad \propto x'resid = -x'(y - pred)
     gr
 end
 
 grad!(m::GLMModel,
     gr::Vector{Float64},
     coefs::Vector{Float64},
-    x::Matrix{Float64},
+    x::DSMat{Float64},
     y::Vector{Float64};
     offset::Vector{Float64} = emptyvector(Float64)) = grad_scratch!(m, gr, coefs, x, y, similar(y), offset=offset)
 
@@ -73,7 +74,7 @@ type LogisticModel <: GLMModel end
 function predict!(m::LogisticModel,
                            pr::DenseVector{Float64},
                            coefs::Vector{Float64},
-                           x::Matrix{Float64};
+                           x::DSMat{Float64};
                            offset::Vector{Float64} = emptyvector(Float64))
     linpred!(pr, coefs, x; offset=offset)
     map1!(LogisticFun(), pr)
@@ -95,7 +96,7 @@ QuantileModel() = QuantileModel(0.5)
 function grad_scratch!(m::QuantileModel,
                                gr::Vector{Float64},
                                coefs::Vector{Float64},
-                               x::Matrix{Float64},
+                               x::DSMat{Float64},
                                y::Vector{Float64},
                                scratch::Vector{Float64};
                                offset::Vector{Float64} = emptyvector(Float64))

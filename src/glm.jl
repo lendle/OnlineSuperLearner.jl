@@ -5,19 +5,19 @@ include("glmmodel.jl")
 abstract AbstractGLMLearner <: Learner
 
 
-predict!(obj::AbstractGLMLearner, pr::DenseVector{Float64}, x::Matrix{Float64}; offset=emptyvector(Float64)) =
+predict!(obj::AbstractGLMLearner, pr::DenseVector{Float64}, x::DSMat{Float64}; offset=emptyvector(Float64)) =
     predict!(obj.m, pr, obj.coefs, x, offset=offset)
 
-predict(obj::AbstractGLMLearner, x::Matrix{Float64}; offset=emptyvector(Float64)) =
+predict(obj::AbstractGLMLearner, x::DSMat{Float64}; offset=emptyvector(Float64)) =
     predict!(obj, Array(Float64, size(x, 1)), x, offset=offset)
 
-linpred!(obj::AbstractGLMLearner, pr::DenseVector{Float64}, x::Matrix{Float64}; offset=emptyvector(Float64)) =
+linpred!(obj::AbstractGLMLearner, pr::DenseVector{Float64}, x::DSMat{Float64}; offset=emptyvector(Float64)) =
     linpred!(pr, obj.coefs, x, offset=offset)
 
-linpred(obj::AbstractGLMLearner, x::Matrix{Float64}; offset=emptyvector(Float64)) =
+linpred(obj::AbstractGLMLearner, x::DSMat{Float64}; offset=emptyvector(Float64)) =
     linpred!(obj, Array(Float64, size(x, 1)), x, offset=offset)
 
-loss(obj::AbstractGLMLearner, x::Matrix{Float64}, y::Vector{Float64}; offset=emptyvector(Float64)) =
+loss(obj::AbstractGLMLearner, x::DSMat{Float64}, y::Vector{Float64}; offset=emptyvector(Float64)) =
     loss(obj.m, predict(obj, x), y)
 
 ################################
@@ -57,7 +57,7 @@ function init!(obj::GLMLearner, p)
     obj
 end
 
-function update!(obj::GLMLearner, x::Matrix{Float64}, y::Vector{Float64}; offset=emptyvector(Float64))
+function update!(obj::GLMLearner, x::DSMat{Float64}, y::Vector{Float64}; offset=emptyvector(Float64))
     obj.initialized || init!(obj, size(x, 2))
     grad!(obj.m, obj.gr, which_weights(obj.optimizer, obj.coefs), x, y, offset=offset)
     update!(obj.optimizer, obj.coefs, obj.gr)
@@ -110,7 +110,7 @@ function init!(obj::GLMNetLearner, p)
     obj
 end
 
-function update!(obj::GLMNetLearner, x::Matrix{Float64}, y::Vector{Float64})
+function update!(obj::GLMNetLearner, x::DSMat{Float64}, y::Vector{Float64})
     obj.initialized || init!(obj, size(x,2))
 
     #calculate the gradient like usual

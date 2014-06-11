@@ -3,7 +3,7 @@ export SuperLearner, calc_losses
 type SuperLearner <: Learner
     candidates::Vector{Learner}
     combiner::GLMLearner
-    Z::Matrix{Float64}
+    Z::DSMat{Float64}
     t::Int
     initialized::Bool
     function SuperLearner{L<:Learner}(candidates::Vector{L}, combiner::GLMLearner)
@@ -38,7 +38,7 @@ function init!(obj::SuperLearner, n)
     obj.initialized = true
 end
 
-function update_combination!(obj::SuperLearner, x::Matrix{Float64}, y::Vector{Float64})
+function update_combination!(obj::SuperLearner, x::DSMat{Float64}, y::Vector{Float64})
     for (j, cand) in enumerate(obj.candidates)
             predict!(cand, view(obj.Z, :, j), x)
     end
@@ -46,13 +46,13 @@ function update_combination!(obj::SuperLearner, x::Matrix{Float64}, y::Vector{Fl
     obj.combiner.coefs = projectsimplex(obj.combiner.coefs)
 end
 
-function update_candidates!(obj::SuperLearner, x::Matrix{Float64}, y::Vector{Float64})
+function update_candidates!(obj::SuperLearner, x::DSMat{Float64}, y::Vector{Float64})
     for cand in obj.candidates
         update!(cand, x, y)
     end
 end
 
-function update!(obj::SuperLearner, x::Matrix{Float64}, y::Vector{Float64})
+function update!(obj::SuperLearner, x::DSMat{Float64}, y::Vector{Float64})
     obj.initialized || init!(obj, size(x, 1))
     obj.t += 1
     if obj.t > 1
@@ -63,16 +63,16 @@ function update!(obj::SuperLearner, x::Matrix{Float64}, y::Vector{Float64})
 end
 
 #if obj.Z is the right size, return it. Otherwise allocate a new matrix and return that.
-get_Z(obj::SuperLearner, x::Matrix{Float64}) = size(x, 1) == size(obj.Z, 1)? obj.Z: Array(Float64, size(x, 1), length(obj.candidates))
+get_Z(obj::SuperLearner, x::DSMat{Float64}) = size(x, 1) == size(obj.Z, 1)? obj.Z: Array(Float64, size(x, 1), length(obj.candidates))
 
-function predict!(obj::SuperLearner, pr::DenseVector{Float64}, x::Matrix{Float64}, Z::Matrix{Float64}=get_Z(obj, x))
+function predict!(obj::SuperLearner, pr::DenseVector{Float64}, x::DSMat{Float64}, Z::DSMat{Float64}=get_Z(obj, x))
     for (j, cand) in enumerate(obj.candidates)
         predict!(cand, view(Z, :, j), x)
     end
     predict!(obj.combiner, pr, Z)
 end
 
-function calc_losses(obj::SuperLearner, x::Matrix{Float64}, y::Vector{Float64})
+function calc_losses(obj::SuperLearner, x::DSMat{Float64}, y::Vector{Float64})
     pr = Array(Float64, size(x, 1))
     losses = Array(Float64, length(obj.candidates) + 1)
     Z = get_Z(obj, x)

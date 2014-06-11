@@ -40,7 +40,7 @@ function grad!(obj::SVMLearner, x, y)
    error()
 end
 
-function update!(obj::SVMLearner, x::Matrix{Float64}, y::Vector{Float64})
+function update!(obj::SVMLearner, x::DSMat{Float64}, y::Vector{Float64})
     obj.initialized || init!(obj, size(x, 2))
     grad!(obj, x, y)
     update!(obj.optimizer, obj.coefs, obj.gr)
